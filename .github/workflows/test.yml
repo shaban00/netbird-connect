@@ -1,0 +1,71 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: shellcheck
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          shellcheck scripts/*.sh
+
+      - name: actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint
+
+  install:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install NetBird
+        env:
+          GITHUB_TOKEN: ${{ github.token }}   # authenticated API call avoids shared-runner rate limits
+        run: bash scripts/install.sh
+
+      - name: Verify a binary is installed
+        run: netbird version
+
+  connect:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Gate on secret
+        id: gate
+        env:
+          KEY: ${{ secrets.NETBIRD_SETUP_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No NETBIRD_SETUP_KEY set; skipping live connect."
+          fi
+
+      - name: Connect via the action
+        if: steps.gate.outputs.run == 'true'
+        uses: ./
+        with:
+          setup-key: ${{ secrets.NETBIRD_SETUP_KEY }}
+          management-url: ${{ secrets.NETBIRD_MANAGEMENT_URL }}
+          hostname: github-runner-${{ github.run_id }}
+
+      - name: Verify connectivity
+        if: steps.gate.outputs.run == 'true'
+        run: netbird status -d
+
+      - name: Disconnect
+        if: steps.gate.outputs.run == 'true'
+        run: netbird down
+
+      - name: Deregister
+        if: steps.gate.outputs.run == 'true'
+        run: netbird deregister
