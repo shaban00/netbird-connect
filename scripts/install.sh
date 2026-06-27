@@ -6,7 +6,6 @@ REPO="netbirdio/netbird"
 VERSION="${NB_VERSION:-latest}"
 
 resolve_latest() {
-  echo "Resolving latest stable NetBird release..." >&2
   local api="https://api.github.com/repos/${REPO}/releases/latest"
   local auth=()
   [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
@@ -26,7 +25,6 @@ if [ -z "$VERSION" ] || [ "$VERSION" = "latest" ]; then
     echo "::error::Could not resolve the latest NetBird release from the GitHub API" >&2
     exit 1
   fi
-  echo "Latest stable is ${VERSION}"
 else
   if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
     echo "::error::Version must look like 0.73.1 (got '${VERSION}')." >&2
@@ -46,15 +44,19 @@ esac
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+SUDO=()
+if [ "$(id -u)" -ne 0 ]; then
+  SUDO=(sudo)
+fi
+
 URL="https://github.com/${REPO}/releases/download/v${VERSION}/netbird_${VERSION}_linux_${ARCH}.tar.gz"
-echo "Downloading NetBird ${VERSION} (${ARCH})"
-echo "  $URL"
+echo "Downloading NetBird ${VERSION} (${ARCH}) - ${URL}"
 curl -fsSL -o "$TMP/nb.tar.gz" "$URL"
 tar -xzf "$TMP/nb.tar.gz" -C "$TMP" netbird
-sudo install -m 0755 "$TMP/netbird" /usr/local/bin/netbird
+"${SUDO[@]}" install -m 0755 "$TMP/netbird" /usr/local/bin/netbird
 
 INSTALLED="$(netbird version)"
 case "$INSTALLED" in
-  *"$VERSION"*) echo "Version check passed (${VERSION})." ;;
+  *"$VERSION"*) echo "Version check passed (${VERSION})" ;;
   *) echo "::warning::Installed version '${INSTALLED}' does not contain '${VERSION}'" ;;
 esac

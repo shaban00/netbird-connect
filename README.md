@@ -6,7 +6,7 @@ A GitHub action that joins your NetBird network as an **ephemeral peer**, so a w
 
 ```yaml
 - name: NetBird Connect
-  uses: shaban00/netbird-connect@v1.0.0
+  uses: shaban00/netbird-connect@v1.0.1
   with:
     setup-key: ${{ secrets.NETBIRD_SETUP_KEY }}
     management-url: ${{ secrets.NETBIRD_MANAGEMENT_URL }}

@@ -16,7 +16,7 @@ inputs:
   hostname:
     description: 'Peer name shown in the NetBird dashboard'
     required: false
-    default: ''
+    default: 'gh-runner-${{ github.event.repository.name }}'
   version:
     description: >-
       NetBird client version to install. Defaults to "latest" (newest stable release). Pin to a specific version (e.g. 0.73.1) to match your fleet and avoid a runner silently jumping ahead of your peers.
