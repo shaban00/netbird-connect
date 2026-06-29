@@ -6,7 +6,7 @@ A GitHub action that joins your NetBird network as an **ephemeral peer**, so a w
 
 ```yaml
 - name: NetBird Connect
-  uses: shaban00/netbird-connect@v1.0.1
+  uses: shaban00/netbird-connect@v1.0.2
   with:
     setup-key: ${{ secrets.NETBIRD_SETUP_KEY }}
     management-url: ${{ secrets.NETBIRD_MANAGEMENT_URL }}
@@ -21,7 +21,7 @@ A GitHub action that joins your NetBird network as an **ephemeral peer**, so a w
 | `hostname`       | no       | `''`                         | Peer name shown in the dashboard.                     |
 | `version`        | no       | `'latest'`                   | NetBird client version. eg: `0.73.2`                  |
 | `preshared-key`  | no       | `''`                         | WireGuard PSK, if your peers require one.             |
-| `timeout`        | no       | `60`                         | Seconds to wait for `Management: Connected`.          |
+| `allow-ssh`      | no       | `false`                      | Enable NetBird SSH access to the runner.              |
 
 ## NetBird side setup
 
