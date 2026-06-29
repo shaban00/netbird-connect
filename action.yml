@@ -26,10 +26,10 @@ inputs:
     description: 'WireGuard preshared key, if your peers require one'
     required: false
     default: ''
-  timeout:
-    description: 'Seconds to wait for the management connection'
+  allow-ssh:
+    description: 'Enable NetBird SSH access to the runner before exposing. Starts the embedded SSH server with root and no SSH-layer auth, so access is gated only by your NetBird policy. Default false.'
     required: false
-    default: '60'
+    default: 'false'
   github-token:
     description: >-
       Token used only to authenticate the GitHub API call that resolves "latest" (avoids shared-runner rate limits). Defaults to the workflow token; no extra permissions needed.
@@ -53,5 +53,5 @@ runs:
         NB_MANAGEMENT_URL: ${{ inputs.management-url }}
         NB_HOSTNAME: ${{ inputs.hostname }}
         NB_PRESHARED_KEY: ${{ inputs.preshared-key }}
-        NB_TIMEOUT: ${{ inputs.timeout }}
+        ALLOW_SSH: ${{ inputs.allow-ssh }}
       run: bash "${{ github.action_path }}/scripts/connect.sh"

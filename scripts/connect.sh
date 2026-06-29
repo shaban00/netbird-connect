@@ -6,7 +6,8 @@ set -euo pipefail
 MGMT_URL="${NB_MANAGEMENT_URL:-https://api.netbird.io:443}"
 HOSTNAME_ARG="${NB_HOSTNAME:-}"
 PSK="${NB_PRESHARED_KEY:-}"
-TIMEOUT="${NB_TIMEOUT:-60}"
+ALLOW_SSH="${ALLOW_SSH:-false}"
+
 
 SUDO=()
 if [ "$(id -u)" -ne 0 ]; then
@@ -26,15 +27,11 @@ args=(--setup-key "$NB_SETUP_KEY" --management-url "$MGMT_URL")
 [ -n "$HOSTNAME_ARG" ] && args+=(--hostname "$HOSTNAME_ARG")
 [ -n "$PSK" ] && args+=(--preshared-key "$PSK")
 
+# --- optionally enable the NetBird SSH server on the runner ---
+if [ "$ALLOW_SSH" = "true" ]; then
+  args+=(--allow-server-ssh --enable-ssh-local-port-forwarding \
+    --enable-ssh-remote-port-forwarding --enable-ssh-sftp --enable-ssh-root \
+    --network-monitor=true --disable-ssh-auth)
+fi
+
 "${SUDO[@]}" netbird up "${args[@]}"
-
-deadline=$(( $(date +%s) + TIMEOUT ))
-while [ "$(date +%s)" -lt "$deadline" ]; do
-  if "${SUDO[@]}" netbird status 2>/dev/null | grep -q "Management: Connected"; then
-    exit 0
-  fi
-done
-
-echo "NetBird failed to connect within ${TIMEOUT}s" >&2
-"${SUDO[@]}" netbird status -d || true
-exit 1
