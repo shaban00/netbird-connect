@@ -5,7 +5,7 @@ set -euo pipefail
 REPO="${NB_REPO:-netbirdio/netbird}"
 VERSION="${NB_VERSION:-latest}"
 
-if ! printf '%s' "$REPO" | grep -Eq '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'; then
+if ! [[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
   echo "::error::repo must look like owner/name (got '${REPO}')." >&2
   exit 1
 fi
@@ -14,12 +14,12 @@ resolve_latest() {
   local api="https://api.github.com/repos/${REPO}/releases/latest"
   local auth=()
   [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
-  local tag
+  local json tag
+  json="$(curl -fsSL "${auth[@]}" -H 'Accept: application/vnd.github+json' "$api")"
   if command -v jq >/dev/null 2>&1; then
-    tag="$(curl -fsSL "${auth[@]}" -H 'Accept: application/vnd.github+json' "$api" | jq -r '.tag_name')"
+    tag="$(jq -r '.tag_name' <<< "$json")"
   else
-    tag="$(curl -fsSL "${auth[@]}" -H 'Accept: application/vnd.github+json' "$api" \
-      | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
+    tag="$(sed -nE 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' <<< "$json" | head -n1)"
   fi
   printf '%s' "${tag#v}"
 }
@@ -31,7 +31,7 @@ if [ -z "$VERSION" ] || [ "$VERSION" = "latest" ]; then
     exit 1
   fi
 else
-  if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+  if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
     echo "::error::Version must look like 0.73.1 (got '${VERSION}')." >&2
     exit 1
   fi

@@ -121,6 +121,8 @@ if [ "$WAIT_TIMEOUT" -gt 0 ]; then
     host="${hp%:*}"; host="${host#[}"; host="${host%]}"
     port="${hp##*:}"
     
+    # host and port are passed as arguments, not expanded in the single quotes
+    # shellcheck disable=SC2016
     until timeout 5 bash -c 'exec 3<>"/dev/tcp/$1/$2"' _ "$host" "$port" 2>/dev/null; do
       if (( SECONDS >= deadline )); then
         echo "::error::Could not connect to ${hp} after ${WAIT_TIMEOUT}s (check the route or network resource, DNS, and that a policy allows this port)" >&2
