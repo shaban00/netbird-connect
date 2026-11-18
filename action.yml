@@ -22,6 +22,11 @@ inputs:
       NetBird client version to install. Defaults to "latest" (newest stable release). Pin to a specific version (e.g. 0.73.1) to match your fleet and avoid a runner silently jumping ahead of your peers.
     required: false
     default: 'latest'
+  repo:
+    description: >-
+      GitHub repository (owner/name) whose releases provide the NetBird client. Defaults to the official netbirdio/netbird.
+    required: false
+    default: 'netbirdio/netbird'
   preshared-key:
     description: 'WireGuard preshared key, if your peers require one'
     required: false
@@ -30,11 +35,39 @@ inputs:
     description: 'Enable NetBird SSH access to the runner before exposing. Starts the embedded SSH server with root and no SSH-layer auth, so access is gated only by your NetBird policy. Default false.'
     required: false
     default: 'false'
+  wait-timeout:
+    description: >-
+      Seconds to wait after connecting until management and signal are connected (and wait-for-peer, if set), so the next step can reach the network. The step fails if it takes longer. 0 skips waiting.
+    required: false
+    default: '60'
+  wait-for-peer:
+    description: >-
+      Also wait until the tunnel to this peer is up: its NetBird name (e.g. db-server or db-server.netbird.selfhosted) or NetBird IP. Needs a policy that lets the runner reach it.
+    required: false
+    default: ''
+  wait-for-host:
+    description: >-
+      Also wait until a TCP connection succeeds to each host:port (comma-separated), e.g. db.internal:5432,10.0.0.5:22. Works for peers and for hosts behind Networks or routes, and checks the policy allows that port.
+    required: false
+    default: ''
+  extra-args:
+    description: >-
+      Extra flags for 'netbird up', separated by spaces or new lines, e.g. "--disable-dns --block-inbound". They come last, so they override the same flags set by other inputs. Values cannot contain spaces.
+    required: false
+    default: ''
   github-token:
     description: >-
       Token used only to authenticate the GitHub API call that resolves "latest" (avoids shared-runner rate limits). Defaults to the workflow token; no extra permissions needed.
     required: false
     default: ${{ github.token }}
+
+outputs:
+  ip:
+    description: 'NetBird IP address of the runner'
+    value: ${{ steps.connect.outputs.ip }}
+  fqdn:
+    description: 'NetBird name (FQDN) of the runner'
+    value: ${{ steps.connect.outputs.fqdn }}
 
 runs:
   using: 'composite'
@@ -44,9 +77,11 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         NB_VERSION: ${{ inputs.version }}
+        NB_REPO: ${{ inputs.repo }}
       run: bash "${{ github.action_path }}/scripts/install.sh"
 
     - name: Connect
+      id: connect
       shell: bash
       env:
         NB_SETUP_KEY: ${{ inputs.setup-key }}
@@ -54,4 +89,8 @@ runs:
         NB_HOSTNAME: ${{ inputs.hostname }}
         NB_PRESHARED_KEY: ${{ inputs.preshared-key }}
         ALLOW_SSH: ${{ inputs.allow-ssh }}
+        NB_WAIT_TIMEOUT: ${{ inputs.wait-timeout }}
+        NB_WAIT_FOR_PEER: ${{ inputs.wait-for-peer }}
+        NB_WAIT_FOR_HOST: ${{ inputs.wait-for-host }}
+        NB_EXTRA_ARGS: ${{ inputs.extra-args }}
       run: bash "${{ github.action_path }}/scripts/connect.sh"
